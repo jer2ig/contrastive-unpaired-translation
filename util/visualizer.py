@@ -79,6 +79,7 @@ class Visualizer():
         self.port = opt.display_port
         self.saved = False
         self.use_wandb = opt.use_wandb
+        self.current_epoch = 0
         if self.display_id > 0:  # connect to a visdom server given <display_port> and <display_server>
             import visdom
             self.plot_data = {}
@@ -164,6 +165,21 @@ class Visualizer():
                 except VisdomExceptionBase:
                     self.create_visdom_connections()
 
+            else:  # show each image in a separate visdom panel;
+                idx = 1
+                try:
+                    for label, image in visuals.items():
+                        image_numpy = util.tensor2im(image)
+                        self.vis.image(
+                            image_numpy.transpose([2, 0, 1]),
+                            self.display_id + idx,
+                            None,
+                            dict(title=label)
+                        )
+                        idx += 1
+                except VisdomExceptionBase:
+                    self.create_visdom_connections()
+
         if self.use_wandb:
             columns = [key for key, _ in visuals.items()]
             columns.insert(0, 'epoch')
@@ -181,20 +197,7 @@ class Visualizer():
                 result_table.add_data(*table_row)
                 self.wandb_run.log({"Result": result_table})
 
-            else:     # show each image in a separate visdom panel;
-                idx = 1
-                try:
-                    for label, image in visuals.items():
-                        image_numpy = util.tensor2im(image)
-                        self.vis.image(
-                            image_numpy.transpose([2, 0, 1]),
-                            self.display_id + idx,
-                            None,
-                            dict(title=label)
-                        )
-                        idx += 1
-                except VisdomExceptionBase:
-                    self.create_visdom_connections()
+
 
         if self.use_html and (save_result or not self.saved):  # save images to an HTML file if they haven't been saved.
             self.saved = True
